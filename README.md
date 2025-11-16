@@ -1,157 +1,245 @@
-# Arsitektur CodeIgniter + Laravel Integration
+# Sistem Manajemen Perpustakaan
 
-## Overview Sistem
+## 📋 Overview
 
-**USER BROWSER**  
-Mengakses: `http://localhost:8080`
+Sistem manajemen perpustakaan dengan arsitektur terpisah antara frontend (CodeIgniter) dan backend (Laravel API).
 
-**CODEIGNITER FRONTEND** (Port 8080)  
-- **Routes**: Menangani routing untuk buku dan dashboard
-- **BookController**: Validasi input, memanggil BookApiService, return views
-- **BookApiService**: Service layer untuk komunikasi dengan API Laravel menggunakan GuzzleHTTP
-- **Views**: Template untuk menampilkan data (index, create, edit, dashboard)
+### 🏗️ Arsitektur Sistem
+```
+Frontend (CodeIgniter - Port 8080) 
+    → API Calls → 
+Backend (Laravel API - Port 8000) 
+    → Database (MySQL - Port 3306)
+```
 
-**LARAVEL BACKEND API** (Port 8000)  
-- **API Routes**: Endpoint REST API untuk operasi CRUD buku
-- **BookController**: Validasi request, business logic, return JSON response
-- **BookModel/Repository**: Handle database operations, validation, relationships
-- **Middleware**: CORS handling, authentication, rate limiting
+### 🛠️ Teknologi
+- **Frontend**: CodeIgniter 4, Bootstrap 5, jQuery
+- **Backend**: Laravel 10/11, Eloquent ORM  
+- **Database**: MySQL
+- **HTTP Client**: GuzzleHttp
 
-**MYSQL DATABASE** (Port 3306)  
-Database: `library_management` dengan tabel `books` yang berisi field lengkap untuk manajemen buku.
+## 🚀 Quick Start
 
----
+### Backend Setup (Laravel)
+```bash
+cd library-backend
+composer install
+cp .env.example .env
+php artisan key:generate
 
-## Alur Data: Get All Books
+# Konfigurasi database di .env
+php artisan migrate
+php artisan serve --port=8000
+```
 
-1. **User** klik "Daftar Buku" → Browser: GET `http://localhost:8080/books`
+### Frontend Setup (CodeIgniter)
+```bash
+cd library-frontend
+composer install
+cp env .env
 
-2. **CodeIgniter Router** arahkan ke `BookController::index()`
+# Konfigurasi API URL di .env
+php -S localhost:8080 -t public/
+```
 
-3. **BookController** panggil `$this->apiService->getAllBooks($filters)`
+### Environment Configuration
+**.env Frontend:**
+```properties
+app.baseURL = 'http://localhost:8080/'
+api.baseURL = 'http://localhost:8000/api/'
+```
 
-4. **BookApiService** buat HTTP request: GET `http://localhost:8000/api/books?search=...&kategori=...`
+**.env Backend:**
+```properties
+DB_DATABASE=library_management
+DB_USERNAME=root
+DB_PASSWORD=root
+```
 
-5. **Laravel API Route** tangani request dan panggil `BookController::index()`
+## 📊 Struktur Database
 
-6. **Laravel BookController** query database dan return JSON response dengan data buku dan metadata pagination
+### Table: books
+| Column | Type | Description |
+|--------|------|-------------|
+| id | INT | Primary Key |
+| judul | VARCHAR(255) | Judul buku |
+| pengarang | VARCHAR(255) | Penulis |
+| penerbit | VARCHAR(255) | Penerbit |
+| tahun_terbit | YEAR | Tahun terbit |
+| jumlah_halaman | INT | Jumlah halaman |
+| kategori | VARCHAR(100) | Kategori |
+| isbn | VARCHAR(20) | ISBN |
+| status | ENUM | Status buku |
 
-7. **Laravel** kirim response JSON kembali ke CodeIgniter
+**Status Values:** `Tersedia`, `Dipinjam`, `Rusak`, `Hilang`
 
-8. **BookApiService** parse JSON response dan return formatted array
+## 🔌 API Endpoints
 
-9. **BookController** render view `books/index` dengan data yang diterima
+### Books Management
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/books` | Get books dengan filter & pagination |
+| `POST` | `/api/books` | Create new book |
+| `GET` | `/api/books/{id}` | Get specific book |
+| `PUT` | `/api/books/{id}` | Update book |
+| `DELETE` | `/api/books/{id}` | Delete book |
+| `PUT` | `/api/books/{id}/status` | Update status |
+| `GET` | `/api/books/statistics/overview` | Get statistics |
 
-10. **Browser** render halaman dengan daftar buku
+### Parameters Filter
+```http
+GET /api/books?search=programming&kategori=Technology&status=Tersedia&per_page=10
+```
 
----
-
-## Alur Data: Create Book
-
-1. **User** submit form di `http://localhost:8080/books/create` → Browser: POST `http://localhost:8080/books`
-
-2. **CodeIgniter Router** arahkan ke `BookController::store()`
-
-3. **BookController** validasi input, jika valid panggil `$this->apiService->createBook($bookData)`
-
-4. **BookApiService** buat HTTP request: POST `http://localhost:8000/api/books` dengan payload JSON data buku
-
-5. **Laravel API Route** tangani request dan panggil `BookController::store()`
-
-6. **Laravel BookController** validasi input, jika valid buat record baru di database
-
-7. **Laravel** return JSON response dengan status success dan data buku yang dibuat
-
-8. **BookApiService** terima dan parse response
-
-9. **BookController** redirect ke `/books` dengan success message (atau kembali ke form dengan error message)
-
-10. **Browser** navigasi ke books list atau tampilkan error di form
-
----
-
-## Error Handling Flow
-
-**Exception/Error terjadi** di BookApiService (network error, timeout, API server down, HTTP error)
-
-**BookApiService** tangani exception dengan method `handleException()`:
-- Ambil response status code (jika tersedia)
-- Parse error message dari response body
-- Return standardized error array:
-```php
+### Response Format
+**Success:**
+```json
 {
-    "success": false,
-    "message": "error description", 
-    "status_code": 500,
-    "data": null
+    "success": true,
+    "data": {...},
+    "meta": {...},
+    "message": "Success message"
 }
 ```
 
-**BookController** handle response:
-- Check: `if (!$response['success'])`
-- Tampilkan error message ke user
-- Log error (optional)
+**Error:**
+```json
+{
+    "success": false,
+    "message": "Error message",
+    "errors": {...}
+}
+```
 
----
+## 🔄 Alur Kerja
 
-## Struktur File
+### 1. Menampilkan Daftar Buku
+```
+User → GET /books → BookController → BookApiService → 
+HTTP GET /api/books → Laravel Controller → Database → 
+JSON Response → Render View
+```
 
+### 2. Menambah Buku Baru
+```
+Form Submit → POST /books → Validation → 
+BookApiService → HTTP POST /api/books → 
+Laravel Validation → Database Insert → 
+Success Response → Redirect dengan Flash Message
+```
+
+### 3. Error Handling
+```
+API Error → BookApiService → Format Error → 
+BookController → Tampilkan Pesan Error ke User
+```
+
+## 📁 Struktur Project
+
+### Backend (Laravel)
+```
+library-backend/
+├── app/
+│   ├── Models/Book.php
+│   ├── Http/Controllers/BookController.php
+│   └── Http/Middleware/Cors.php
+├── database/migrations/
+├── routes/api.php
+└── config/cors.php
+```
+
+### Frontend (CodeIgniter)
 ```
 library-frontend/
 ├── app/
-│   ├── Config/
-│   │   ├── Database.php
-│   │   └── Api.php
-│   ├── Controllers/
-│   │   └── BookController.php
-│   ├── Service/
+│   ├── Controllers/BookController.php
+│   ├── Services/
 │   │   ├── ApiService.php
 │   │   └── BookApiService.php
-│   └── Views/
-│       └── books/
-│           ├── index.php
-│           ├── create.php
-│           ├── edit.php
-│           └── dashboard.php
-├── .env
-├── API_ENDPOINTS_REQUIRED.md
-└── SETUP_CHECKLIST.md
+│   └── Views/books/
+├── public/assets/
+└── .env
 ```
+
+## ✨ Fitur Utama
+
+### Backend Features
+- ✅ RESTful API dengan Laravel
+- ✅ CRUD operations untuk books
+- ✅ Filtering & pagination
+- ✅ Validation & error handling
+- ✅ CORS configuration
+- ✅ Statistics endpoint
+
+### Frontend Features
+- ✅ CodeIgniter MVC structure
+- ✅ API integration dengan GuzzleHTTP
+- ✅ Form validation
+- ✅ Bootstrap UI
+- ✅ Flash messages
+- ✅ Responsive design
+
+## 🎯 Contoh Penggunaan
+
+### Get All Books dengan Filter
+```php
+// Frontend Controller
+$filters = [
+    'search' => 'programming',
+    'kategori' => 'Technology', 
+    'per_page' => 10
+];
+$response = $this->bookApiService->getAllBooks($filters);
+```
+
+### Create New Book
+```php
+$bookData = [
+    'judul' => 'Belajar PHP',
+    'pengarang' => 'John Doe',
+    'penerbit' => 'Tech Publisher',
+    'tahun_terbit' => 2024,
+    'kategori' => 'Programming'
+];
+$response = $this->bookApiService->createBook($bookData);
+```
+
+### Update Book Status
+```php
+$response = $this->bookApiService->updateBookStatus(1, 'Dipinjam');
+```
+
+## ⚠️ Error Handling
+
+Sistem menangani berbagai jenis error:
+- Network timeout
+- API server down
+- Validation errors
+- Database errors
+- HTTP errors (4xx, 5xx)
+
+## 🔧 Configuration
+
+### CORS Headers (Laravel)
+```php
+// config/cors.php
+'allowed_origins' => ['http://localhost:8080'],
+'allowed_methods' => ['*'],
+'allowed_headers' => ['*'],
+```
+
+### API Service (CodeIgniter)
+```php
+// Timeout configuration
+'timeout' => 30.0,
+'connect_timeout' => 10
+```
+
+## 📞 Port Configuration
+- **Frontend**: http://localhost:8080
+- **Backend API**: http://localhost:8000  
+- **MySQL Database**: localhost:3306
 
 ---
 
-## Environment Variables
-
-**.env file**:
-```properties
-# Frontend settings
-app.baseURL = 'http://localhost:8080/'
-
-# API Configuration  
-api.baseURL = 'http://localhost:8000/api/'
-
-# Database (optional, untuk fallback/testing)
-database.default.hostname = localhost
-database.default.database = library_management  
-database.default.username = root
-database.default.password = root
-```
-
----
-
-## Port Configuration
-
-- **CodeIgniter Frontend**: `http://localhost:8080`
-- **Laravel Backend API**: `http://localhost:8000` 
-- **MySQL Database**: `localhost:3306`
-
----
-
-## CORS Headers (Required in Laravel)
-
-```
-Access-Control-Allow-Origin: http://localhost:8080
-Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS  
-Access-Control-Allow-Headers: Content-Type, Accept
-Access-Control-Max-Age: 3600
-```
+**Sistem siap untuk development dan production deployment dengan arsitektur yang scalable dan maintainable.**
