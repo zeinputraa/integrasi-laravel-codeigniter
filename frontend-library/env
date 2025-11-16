@@ -1,0 +1,42 @@
+#--------------------------------------------------------------------
+# ENVIRONMENT
+#--------------------------------------------------------------------
+CI_ENVIRONMENT = development
+
+#--------------------------------------------------------------------
+# APP
+#--------------------------------------------------------------------
+app.baseURL = 'http://localhost:8080/'
+app.forceGlobalSecureRequests = false
+
+#--------------------------------------------------------------------
+# API Configuration
+#--------------------------------------------------------------------
+api.baseURL = 'http://localhost:8000/api/'
+
+#--------------------------------------------------------------------
+# DATABASE
+#--------------------------------------------------------------------
+# database.default.hostname = localhost
+# database.default.database = ci4
+# database.default.username = root
+# database.default.password = root
+# database.default.DBDriver = MySQLi
+# database.default.port = 3306
+
+#--------------------------------------------------------------------
+# ENCRYPTION
+#--------------------------------------------------------------------
+encryption.key = 
+
+#--------------------------------------------------------------------
+# SESSION  
+#--------------------------------------------------------------------
+session.driver = 'CodeIgniter\Session\Handlers\FileHandler'
+session.savePath = WRITEPATH . 'session'
+
+#--------------------------------------------------------------------
+# LOGGER
+#--------------------------------------------------------------------
+logger.threshold = 4
+logger.handlers = ['CodeIgniter\Log\Handlers\FileHandler']
